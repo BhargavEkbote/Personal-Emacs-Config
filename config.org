@@ -108,6 +108,7 @@
     :global-prefix "M-SPC") ;; access leader in insert mode
 
   (bhargav/leader-keys
+    "SPC" '(counsel-M-x :wk "Counsel M-x")
     "." '(find-file :wk "Find file")
     "f c" '((lambda () (interactive) (find-file "~/.config/emacs/config.org")) :wk "Edit emacs config")
     "f r" '(counsel-recentf :wk "Find recent files")
@@ -138,6 +139,23 @@
     "h v" '(describe-variable :wk "Describe variable")
     ;;"h r r" '((lambda () (interactive) (load-file "~/.config/emacs/init.el")) :wk "Reload emacs config"))
     "h r r" '(reload-init-file :wk "Reload emacs config"))
+
+   (bhargav/leader-keys
+    "m" '(:ignore t :wk "Org")
+    "m a" '(org-agenda :wk "Org agenda")
+    "m e" '(org-export-dispatch :wk "Org export dispatch")
+    "m i" '(org-toggle-item :wk "Org toggle item")
+    "m t" '(org-todo :wk "Org todo")
+    "m B" '(org-babel-tangle :wk "Org babel tangel")
+    "m T" '(org-todo-list :wk "Org todo list"))
+
+   (bhargav/leader-keys
+    "m b" '(:ignore t :wk "Tables")
+    "m b -" '(org-table-insert-hline :wk "Insert hline in table"))
+
+   (bhargav/leader-keys
+    "m d" '(:ignore t :wk "Date/deadline")
+    "m d t" '(org-time-stamp :wk "Org time stamp"))
 
    (bhargav/leader-keys
     "t" '(:ignore t :wk "Toggle")
@@ -179,6 +197,60 @@
   (use-package all-the-icons-dired
     :hook (dired-mode . (lambda () (all-the-icons-dire-mode t)))
   #+end_src
+
+* APP LAUNCHERS
+
+** Counsel-Linux-App
+   Since we have counsel installed, we can use =counsel-linux-app= to launch our Linux apps. It list the apps by their executable command, so it's kind of tricky to use.
+
+  #+begin_src emacs-lisp
+  (defun emacs-counsel-launcher ()
+    "Create and select a frame called emacs-counsel-launcher which consists only of a minibuffer and has specific dimensions. Runs counsel-linux-app on that frame, which is an emacs command that prompts you to select an app and open it in a dmenu like behaviour. Delete the frame after that command has exited"
+    (interactive)
+    (with-selected-frame
+      (make-frame '((name . "emacs-run-launcher")
+                    (minibuffer . only)
+		    (fullscreen . 0) ; no fullscreen
+		    (undecorated . t) ; remove title bar
+		    ;;(auto-raise . t) ; focus on this frame
+		    ;;(tool-bar-lines . 0)
+		    ;;(menu-bar-lines . 0)
+		    (internal-border-width . 10)
+		    (width . 80)
+		    (height . 11)))
+		    (unwind-protect
+		      (counsel-linux-app)
+		      (delete-frame))))
+
+  #+end_src
+
+** App-Launcher
+
+   #+begin_src emacs-lisp
+   (use-package app-launcher
+     :elpaca '(app-launcher :host github :repo "SebastienWae/app-launcher"))
+   ;; create a global keyboard shortcut with the following code
+   ;; emacsclient -cF "((visibility . nil))" -e "(emacs-run-launcher)"
+
+   (defun emacs-run-launcher ()
+     "Create and select a frame called emacs-run-launcher which consists only of a minibuffer and has a specific dimensions. Runs app-launcher-run-app on that frame, which is an emacs command that prompts you to select an app and open it in a dmenu like behaviour. Delete the frame after that command has exited"
+     (interactive)
+     (with-selected-frame
+       (make-frame '((name . "emacs-run-launcher")
+                     (minibuffer . only)
+		     (fullscreen . 0) ; no fullscreen
+		     (undecorated . t) ; remove title bar
+		     ;;(auto-raise . t) ; focus on this frame
+		     ;;(tool-bar-lines . 0)
+		     ;;(menu-bar-lines . 0)
+		     (internal-border-width . 10)
+		     (width . 80)
+		     (height . 11)))
+		     (unwind-protect
+		       (app-launcher-run-app)
+		       (delete-frame))))
+
+   #+end_src
 
 * BUFFER MOVE
   Creating some functions to allow us to easily move windows (splits) around.  The following block of code was taken from buffer-move.el found on the EmacsWiki:
@@ -254,6 +326,72 @@ one, an error is signaled."
       (set-window-buffer other-win buf-this-buf)
       (select-window other-win))))
 #+end_src
+
+* COMPANY
+  [[https://company-mode.github.io/][Company]] is a text completion framework for Emacs. The name stands for "complete anything". Completion will start automatically after you type a few letters. Use M-n and M-p to select, <return> to complete or <tab> to complete the common part.
+
+  #+begin_src emacs-lisp
+  (use-package company
+    :defer 2
+    :diminish
+    :custom
+    (company-begin-commands '(self-insert-command))
+    (company-idle-delay .1)
+    (company-minimum-prefix-length 2)
+    (company-show-numbers t)
+    (company-tooltip-align-annotations 't)
+    (global-company-mode t))
+
+  (use-package company-box
+    :after company
+    :diminish
+    :hook (company-mode . company-box-mode))
+  #+end_src
+
+* DASHBOARD
+  Emacs Dashboard is an extensible startup screen showing you recent files, bookmarks, agenda items and an Emacs banner.
+
+  #+begin_src emacs-lisp
+  (use-package dashboard
+    :ensure t
+    :init
+    (setq initial-buffer-choice 'dashboard-open)
+    (setq dashboard-set-heading-icons t)
+    (setq dashboard-set-file-icons t)
+    (setq dashboard-banner-logo-title "Emacs Is More Than A Text Editor!")
+    (setq dashboard-startup-banner 'logo) ;; use standard emacs logo as banner
+    ;;(setq dashboard-startup-banner "/home/bhargav/.config/emacs/images/emacs-dash.png")  ;; use custom image as banner
+    (setq dashboard-center-content nil) ;; set to 't' for centered content
+    (setq dashboard-items '((recents . 5)
+                            (agenda . 5 )
+			    (bookmarks . 3)
+			    (projects . 3)
+			    (registers . 3)))
+    (dashboard-modify-heading-icons '((recents . "file-text")
+                                (bookmarks . "book")))
+    :config
+    (dashboard-setup-startup-hook))
+  #+end_src
+
+* DIMINISH
+  This package implements hiding or abbreviation of the modeline displays (lighters) of minor-modes.  With this package installed, you can add ':diminish' to any use-package block to hide that particular mode in the modeline.
+
+  #+begin_src emacs-lisp
+  (use-package diminish)
+
+  #+end_src
+
+* FLYCHECK
+  Install =luacheck= from your Linux distro's repositories for flycheck to work correctly with lua files.  Install =python-pylint= for flycheck to work with python files.  Haskell works with flycheck as long as =haskell-ghc= or =haskell-stack-ghc= is installed.  For more information on language support for flycheck, [[https://www.flycheck.org/en/latest/languages.html][read this]].
+
+  #+begin_src emacs-lisp
+  (use-package flycheck
+    :ensure t
+    :defer t
+    :diminish
+    :init (global-flycheck-mode))
+
+  #+end_src
 
 * FONTS
 Defining the various fonts that Emacs will use.
@@ -356,6 +494,16 @@ Let's make GNU Emacs look a little better.
 
   #+end_src
 
+* LANGUAGE SUPPORT
+  Emacs has a built-in programming language modes for Lisp, Scheme, DSSSL, Ada, ASM, AWK, C, C++, Fortran, Icon, IDL (CORBA), IDLWAVE, Java, Javascript, M4, Makefiles, Metafont, Module2, Object Pascal, Objective-C, Octave, Pascal, Perl, Pike, PostScript, Prolog, Python, Ruby, Simula, SQL, Tcl, Verilog, and VHDL. Other languages will require you to install additional modes.
+
+  #+begin_src emacs-lisp
+  (use-package haskell-mode)
+  (use-package lua-mode)
+  
+  #+end_src
+
+
 * ORG MODE
 
 ** Enabling Table of Contents
@@ -379,6 +527,7 @@ Let's make GNU Emacs look a little better.
 
    #+begin_src emacs-lisp
    (electric-indent-mode -1)
+   (setq org-edit-src-content-indentation 0)
    #+end_src
 
 ** Source Code Block Tag Expansion
@@ -401,6 +550,15 @@ Let's make GNU Emacs look a little better.
    #+begin_src emacs-lisp
    (require 'org-tempo)
    #+end_src
+
+* PROJECTILE
+  [[https://github.com/bbatsov/projectile][Projectile]] is a project interaction library for Emacs. It should be noted that many projectile commands do not work if you have set "fish" as the "shell-file-name" for Emacs. had initially set "bash" as the "shell-file-name" in the Vterm section of this config, but oddly enough I changed it to "bin/sh" and projectile now works as expected, and Vterm still uses "bash because my default user "sh" on my Linux system is "bash".
+
+  #+begin_src emacs-lisp
+  (use-package projectile
+    :config
+    (projectile-mode 1))
+  #+end_src
 
 * RAINBOW MODE
   Display the actual colour as a background for any hex colour value (ex. #ffffff).  The code block below enables rainbow-mode in all programming modes (prog-mode) as well as org-mode, which is why rainbow works in this document.
@@ -452,7 +610,7 @@ This is just an example of how to create a simple function in Emacs. Use this fu
    #+begin_src emacs-lisp
    (use-package vterm
    :config 
-   (setq shell-file-name "/bin/fish"
+   (setq shell-file-name "/bin/sh"
          vterm-max-scrollback 5000))
    #+end_src
 
@@ -504,9 +662,10 @@ This is just an example of how to create a simple function in Emacs. Use this fu
   (use-package which-key
     :init
       (which-key-mode 1)
+    :diminish
     :config
     (setq which-key-side-window-location 'bottom
-          which-key-sort-order #'which-key-key-order-alpha
+          which-key-sort-order #'which-key-key-order
           which-key-sort-uppercase-first nil
           which-key-add-column-padding 1
           which-key-max-display-columns nil
@@ -515,6 +674,6 @@ This is just an example of how to create a simple function in Emacs. Use this fu
           which-key-side-window-max-height 0.25
           which-key-idle-delay 0.8
           which-key-max-description-length 25
-          which-key-allow-imprecise-window-fit t
+          which-key-allow-imprecise-window-fit nil
           which-key-separator " → " ))
 #+end_src
